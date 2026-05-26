@@ -30,10 +30,10 @@ curl -sSL https://raw.githubusercontent.com/vynxc/steam-freebooter-builds/main/i
 ## Uninstall
 
 ```bash
-rm ~/.local/share/steam-freebooter/sf-injector.so
-rm ~/.config/environment.d/10-steam-freebooter.conf
-rm ~/.local/share/applications/steam.desktop
+curl -sSL https://raw.githubusercontent.com/vynxc/steam-freebooter-builds/main/uninstall.sh | bash
 ```
+
+This removes the injector, cleans up the environment config, and restores the stock Steam launcher. Your `~/.config/steam-freebooter` config is preserved in case you reinstall.
 
 ## Source Code
 
