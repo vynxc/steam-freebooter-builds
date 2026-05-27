@@ -29,9 +29,19 @@ need_cmd() {
 
 need_cmd curl
 
+USE_BETA=0
+if [[ "${1:-}" == "--beta" ]]; then
+  USE_BETA=1
+fi
+
 # ── Download from latest release ──────────────────────────────────
-info "Fetching latest release from ${REPO}..."
-RELEASE_JSON=$(curl -sSL "${API_URL}/releases/latest") || die "Failed to fetch latest release"
+if [[ "${USE_BETA}" == "1" ]]; then
+  info "Fetching latest beta release from ${REPO}..."
+  RELEASE_JSON=$(curl -sSL "${API_URL}/releases") || die "Failed to fetch releases"
+else
+  info "Fetching latest stable release from ${REPO}..."
+  RELEASE_JSON=$(curl -sSL "${API_URL}/releases/latest") || die "Failed to fetch latest release"
+fi
 
 # Find the sf-injector.so asset download URL
 DOWNLOAD_URL=$(echo "${RELEASE_JSON}" | grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*sf-injector\.so"' | head -1 | grep -o 'https://[^"]*')
