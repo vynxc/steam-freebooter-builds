@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # steam-freebooter uninstaller.
 #
-# Removes the injector library, environment config, and restores
+# Removes the injector libraries, old environment config, and restores
 # the stock Steam desktop launcher.
 #
 # Usage:
@@ -35,7 +35,7 @@ fi
 
 # ── Restore stock Steam desktop launcher ─────────────────────────
 if [[ -f "${DESKTOP_FILE}" ]]; then
-  if grep -q "LD_AUDIT" "${DESKTOP_FILE}" 2>/dev/null; then
+  if grep -Eq "steam-freebooter|LD_AUDIT|LD_PRELOAD" "${DESKTOP_FILE}" 2>/dev/null; then
     if [[ -f "${STOCK_DESKTOP}" ]]; then
       cp "${STOCK_DESKTOP}" "${DESKTOP_FILE}"
       info "Restored stock Steam launcher at ${DESKTOP_FILE}"

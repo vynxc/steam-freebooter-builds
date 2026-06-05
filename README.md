@@ -12,19 +12,18 @@ curl -sSL https://raw.githubusercontent.com/vynxc/steam-freebooter-builds/main/i
 
 ### What does this do?
 
-1. Downloads the latest `sf-injector.so` from [GitHub Releases](https://github.com/vynxc/steam-freebooter-builds/releases).
-2. Places it in `~/.local/share/steam-freebooter/sf-injector.so`.
-3. Configures automatic injection via:
-   - **SteamOS Game Mode**: `environment.d` drop-in (`~/.config/environment.d/10-steam-freebooter.conf`)
-   - **Desktop Linux**: Wrapped `steam.desktop` launcher
+1. Downloads the latest i686 injector asset from [GitHub Releases](https://github.com/vynxc/steam-freebooter-builds/releases).
+2. Places it in `~/.local/share/steam-freebooter/lib32/`.
+3. Installs a small launcher wrapper and points `steam.desktop` at it.
+4. Removes the old global `environment.d` injection file if a previous installer created it.
 
 ## Manual Installation
 
-1. Download `sf-injector.so` from the [latest release](https://github.com/vynxc/steam-freebooter-builds/releases/latest).
-2. Place it somewhere permanent and make it executable (`chmod +x`).
-3. Run Steam with:
+1. Download `sf-injector-i686.so` from the [latest release](https://github.com/vynxc/steam-freebooter-builds/releases/latest).
+2. Place it at `~/.local/share/steam-freebooter/lib32/sf-injector.so`.
+3. Run Steam through the installed launcher:
    ```bash
-   LD_AUDIT=/path/to/sf-injector.so steam
+   ~/.local/share/steam-freebooter/steam-freebooter-steam steam
    ```
 
 ## Uninstall
@@ -33,7 +32,7 @@ curl -sSL https://raw.githubusercontent.com/vynxc/steam-freebooter-builds/main/i
 curl -sSL https://raw.githubusercontent.com/vynxc/steam-freebooter-builds/main/uninstall.sh | bash
 ```
 
-This removes the injector, cleans up the environment config, and restores the stock Steam launcher. Your `~/.config/steam-freebooter` config is preserved in case you reinstall.
+This removes the injector, cleans up old environment config, and restores the stock Steam launcher. Your `~/.config/steam-freebooter` config is preserved in case you reinstall.
 
 ## Source Code
 

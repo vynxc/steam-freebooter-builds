@@ -13,8 +13,8 @@ set -euo pipefail
 REPO="vynxc/steam-freebooter-builds"
 API_URL="https://api.github.com/repos/${REPO}"
 DATA_DIR="${HOME}/.local/share/steam-freebooter"
-ENV_DIR="${HOME}/.config/environment.d"
-ENV_FILE="${ENV_DIR}/10-steam-freebooter.conf"
+LAUNCHER="${DATA_DIR}/steam-freebooter-steam"
+OLD_ENV_FILE="${HOME}/.config/environment.d/10-steam-freebooter.conf"
 DESKTOP_DIR="${HOME}/.local/share/applications"
 DESKTOP_FILE="${DESKTOP_DIR}/steam.desktop"
 STOCK_DESKTOP="/usr/share/applications/steam.desktop"
@@ -43,39 +43,58 @@ else
   RELEASE_JSON=$(curl -sSL "${API_URL}/releases/latest") || die "Failed to fetch latest release"
 fi
 
-# Find the sf-injector.so asset download URL
-DOWNLOAD_URL=$(echo "${RELEASE_JSON}" | grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*sf-injector\.so"' | head -1 | grep -o 'https://[^"]*')
+# Find the i686 injector asset download URL.
+DOWNLOAD_URL_32=$(echo "${RELEASE_JSON}" | grep -o '"browser_download_url"[[:space:]]*:[[:space:]]*"[^"]*sf-injector-i686\.so"' | head -1 | grep -o 'https://[^"]*')
 
-if [[ -z "${DOWNLOAD_URL}" ]]; then
-  die "Could not find sf-injector.so in the latest release assets"
+if [[ -z "${DOWNLOAD_URL_32}" ]]; then
+  die "Could not find sf-injector-i686.so in the latest release"
 fi
 
 TAG_NAME=$(echo "${RELEASE_JSON}" | grep -o '"tag_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | grep -o '"[^"]*"$' | tr -d '"')
 info "Installing steam-freebooter ${TAG_NAME}..."
 
-TMP_SO=$(mktemp)
-trap 'rm -f "${TMP_SO}"' EXIT
+TMP_SO_32=$(mktemp)
+trap 'rm -f "${TMP_SO_32}"' EXIT
 
-curl -sSL -f -o "${TMP_SO}" "${DOWNLOAD_URL}" || die "Failed to download sf-injector.so"
+curl -sSL -f -o "${TMP_SO_32}" "${DOWNLOAD_URL_32}" || die "Failed to download sf-injector-i686.so"
 
 # ── Install ───────────────────────────────────────────────────────
 mkdir -p "${DATA_DIR}"
-AUDIT="${DATA_DIR}/sf-injector.so"
 
-install -Dm755 "${TMP_SO}" "${AUDIT}"
-info "Installed ${AUDIT} ($(stat -c%s "${AUDIT}") bytes)"
+install -Dm755 "${TMP_SO_32}" "${DATA_DIR}/lib32/sf-injector.so"
+rm -rf "${DATA_DIR}/lib64"
+info "Installed ${DATA_DIR}/lib32/sf-injector.so ($(stat -c%s "${DATA_DIR}/lib32/sf-injector.so") bytes)"
 
-# ── System Integration (SteamOS & Desktop) ───────────────────────
+cat > "${LAUNCHER}" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
 
-# 1. SteamOS / systemd user session (Game Mode & general Wayland/X11)
-mkdir -p "${ENV_DIR}"
-echo "LD_AUDIT=\"${AUDIT}\"" > "${ENV_FILE}"
-info "Configured systemd environment injection at ${ENV_FILE} (Supports SteamOS Game Mode)"
+DATA_DIR="${HOME}/.local/share/steam-freebooter"
+PRELOAD_32="${DATA_DIR}/lib32/sf-injector.so"
 
-# 2. Wrap Steam .desktop (For standalone desktop mode fallback)
+unset LD_AUDIT
+export SF_INJECTOR_PRELOAD_32="${PRELOAD_32}"
+export LD_PRELOAD="${PRELOAD_32}"
+
+if [[ "$#" -gt 0 ]]; then
+  exec "$@"
+else
+  exec steam
+fi
+SH
+chmod 755 "${LAUNCHER}"
+info "Installed ${LAUNCHER}"
+
+# Remove the old global session injection if a previous installer created it.
+if [[ -f "${OLD_ENV_FILE}" ]]; then
+  rm -f "${OLD_ENV_FILE}"
+  info "Removed old global environment injection at ${OLD_ENV_FILE}"
+fi
+
+# ── System Integration ────────────────────────────────────────────
 if [[ -f "${STOCK_DESKTOP}" ]]; then
   mkdir -p "${DESKTOP_DIR}"
-  WRAP_PREFIX="env LD_AUDIT=\"${AUDIT}\""
+  WRAP_PREFIX="\"${LAUNCHER}\""
   sed -E "s|^Exec=(.+)$|Exec=${WRAP_PREFIX} \1|" \
       "${STOCK_DESKTOP}" > "${DESKTOP_FILE}.tmp"
   mv "${DESKTOP_FILE}.tmp" "${DESKTOP_FILE}"
@@ -95,4 +114,4 @@ echo
 echo "Done. steam-freebooter ${TAG_NAME} installed successfully."
 echo "  1. Make sure Steam is closed."
 echo "  2. Edit ~/.config/steam-freebooter/config.yaml if needed."
-echo "  3. Restart your session or reboot your Steam Deck to apply."
+echo "  3. Launch Steam from your app menu."
